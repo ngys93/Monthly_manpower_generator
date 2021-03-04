@@ -1,0 +1,69 @@
+import pandas as pd
+from collections import Counter
+import numpy as np
+
+isolate_list = ('BHCC CONSTRUCTION PTE. LTD. ',
+                'EVERSENDAI ENGINEERING PTE LTD','RYB ENGINEERING PTE LTD',
+                'KINGSTON SANITARY & PLUMBING PTE LTD',
+                'SNK (ASIA PACIFIC) PTE LTD',
+                'STANLEY SECURITY SINGAPORE PTE. LTD.',
+                'ACTIVE FIRE PROTECTION SYSTEMS PTE. LTD.',
+                'ADDCEL ENGINEERING PTE. LTD.',
+                'JS SOLUTION (S) PTE. LTD.',
+                'POWERLITE ENGINEERING PTE LTD',
+                'AVA GLOBAL PTE. LTD.',
+                'DESHIN ENGINEERING & CONSTRUCTION PTE LTD',
+                'HOCK HENG SENG CONTRACTOR PTE LTD',
+                'LANTRO (S) PTE. LTD.','ROVISYS ASIA COMPANY PTE. LTD.',
+                'TECO ELECTRIC & MACHINERY (PTE.) LTD',
+                'TONG BEE CONSTRUCTION PTE LTD.',
+                'S.H. STAINLESS STEEL CONTRACTOR PTE LTD',
+                'KONE PTE LTD','NGAI CHIN CONSTRUCTION PTE LTD',
+                'JOHNSON CONTROLS (S) PTE. LTD. ',
+                'FUJI SIGNCRAFTS INDUSTRIES PTE LTD',
+                'SCHNEIDER ELECTRIC SINGAPORE PTE. LTD.','Total')
+
+def read_excel(path):
+    df_master = pd.read_excel(path,sheet_name=None,header=None)
+    return df_master
+
+def breakdown(df):
+    counter_company = Counter(df.iloc[:,2])
+    return counter_company
+
+def initialise_summary(sheet_names):
+    global isolate_list
+    #create list of dates for feb
+    df_output = pd.DataFrame(index = isolate_list, columns = sheet_names)
+    return df_output
+
+def update(df_master,df):
+    for date in df.columns:
+        counter = breakdown(df_master.get(date))
+        for indx in df.index:
+            if indx in counter.keys():
+                df.loc[indx][date] = counter.get(indx)
+                
+            else:
+                pass
+        df.loc['Total'][date] = df[date].sum()
+    return df
+
+def write(path,df):
+    with pd.ExcelWriter(path) as writer:
+        df.to_excel(writer,sheet_name = 'daily summary breakdown',
+                    index = True)
+
+#driver
+if __name__ == '__main__':
+    read_path = str(input("Please enter in file location of test file:\n"))
+    read_path = read_path.replace('\\','/')
+    write_path = str(input("Please enter in file location of result file:\n"))
+    write_path = write_path.replace('\\','/')
+    #read master file
+    df_master = read_excel(read_path)
+    sheet_names = df_master.keys()
+    df_output = initialise_summary(sheet_names)#initialise output file format
+    df_output = update(df_master,df_output)
+    df_output.fillna(int(0),inplace=True)
+    write(write_path,df_output)
