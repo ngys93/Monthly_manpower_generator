@@ -1,6 +1,7 @@
 import pandas as pd
 from collections import Counter
 import numpy as np
+from datetime import date
 
 isolate_list = ('BHCC CONSTRUCTION PTE. LTD. ',
                 'EVERSENDAI ENGINEERING PTE LTD','RYB ENGINEERING PTE LTD',
@@ -23,32 +24,56 @@ isolate_list = ('BHCC CONSTRUCTION PTE. LTD. ',
                 'FUJI SIGNCRAFTS INDUSTRIES PTE LTD',
                 'SCHNEIDER ELECTRIC SINGAPORE PTE. LTD.','Total')
 
+month_31days = (1,3,5,7,8,10,12)
+month_30days = (4,6,9,11)
+
+def month_day(year,month):
+    global month_31days
+    global month_30days
+    if year%4 == 0: #leap year
+        if month == 2:
+            return int(29)
+        elif month in month_31days:
+            return int(31)
+        elif month in month_30days:
+            return int(30)
+    else:
+        if month == 2:
+            return int(28)
+        elif month in month_31days:
+            return int(31)
+        elif month in month_30days:
+            return int(30)
+
 def read_excel(path):
-    df_master = pd.read_excel(path,sheet_name=None,header=None)
-    return df_master
-
-def breakdown(df):
-    counter_company = Counter(df.iloc[:,2])
-    return counter_company
-
-def initialise_summary(sheet_names):
-    global isolate_list
-    #create list of dates for feb
-    df_output = pd.DataFrame(index = isolate_list, columns = sheet_names)
-    return df_output
-
-def update(df_master,df):
-    for date in df.columns:
-        counter = breakdown(df_master.get(date))
-        for indx in df.index:
-            if indx in counter.keys():
-                df.loc[indx][date] = counter.get(indx)
-                
-            else:
-                pass
-        df.loc['Total'][date] = df[date].sum()
+    df = pd.read_excel(path,sheet_name=0,header=None)
     return df
 
+def breakdown(df):
+    counter_company = Counter(df)
+    return counter_company
+
+def initialise_summary(year,month,daycount):
+    global isolate_list
+    #create list of dates for feb
+    df_output = pd.DataFrame(index = isolate_list,
+                             columns = [date(year,month,i)for i in range(1,daycount + 1)])
+    return df_output
+
+def update(df_master,df_result,year,month):
+    for num in range(1,len(df_master['path'])):
+        path = df_master.iloc[num,2].replace('\\','/')
+        df_date = pd.read_excel(path,sheet_name=0,header=None)
+        counter = breakdown(df_date.iloc[:,4])
+        for indx in df_result.index:
+            if indx in counter.keys():
+                df_result.loc[indx][date(year,month,num)] = counter.get(indx)
+            else:
+                pass
+        df_result.loc['Total'][date(year,month,num)] = df_result[date(year,month,num)].sum()
+    return df_result
+        
+        
 def write(path,df):
     with pd.ExcelWriter(path) as writer:
         df.to_excel(writer,sheet_name = 'daily summary breakdown',
@@ -60,10 +85,16 @@ if __name__ == '__main__':
     read_path = read_path.replace('\\','/')
     write_path = str(input("Please enter in file location of result file:\n"))
     write_path = write_path.replace('\\','/')
+    year = int(input("Enter in year:\n"))
+    month = int(input("Enter in month as a number:\n"))
+    daycount = month_day(year,month)
     #read master file
+    #read in master list which contains dataframe of paths
     df_master = read_excel(read_path)
-    sheet_names = df_master.keys()
-    df_output = initialise_summary(sheet_names)#initialise output file format
-    df_output = update(df_master,df_output)
-    df_output.fillna(int(0),inplace=True)
+    df_master['path']=df_master.iloc[:,0]+ df_master.iloc[:,1]
+    #path is string sum of 2 columns
+    df_result = initialise_summary(year,month,daycount)
+    df_output = update(df_master,df_result,year,month)
+    df_output.fillna(int(0),inplace = True)
     write(write_path,df_output)
+    print('Monthly summary breakdown ready')
