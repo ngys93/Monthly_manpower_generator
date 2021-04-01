@@ -71,14 +71,12 @@ def update(df_master,df_result,year,month):
             else:
                 pass
         df_result.loc['Total'][date(year,month,num)] = df_result[date(year,month,num)].sum()
-    return df_result
-        
+    return df_result     
         
 def write(path,df):
     with pd.ExcelWriter(path) as writer:
         df.to_excel(writer,sheet_name = 'daily summary breakdown',
                     index = True)
-
 #driver
 if __name__ == '__main__':
     read_path = str(input("Please enter in file location of test file:\n"))
